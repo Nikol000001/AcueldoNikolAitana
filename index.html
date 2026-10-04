@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acuerdos Nikol & Aitana</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@500;700&family=Great+Vibes&family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,500;0,700;1,400&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- Firebase SDK (v9/v10 Compat Modules for clean inline JS) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --emerald-dark: #072e21;
+            --emerald: #0f523c;
+            --emerald-light: #1b8a67;
+            --emerald-soft: #a3e6cd;
+            
+            --purple-dark: #22092c;
+            --purple-deep: #3b154c;
+            --purple-vibrant: #6b21a8;
+            --purple-soft: #d8b4fe;
+            
+            --gold: #d4af37;
+            --gold-light: #fef08a;
+            --gold-shadow: rgba(212, 175, 55, 0.4);
+
+            --parchment-bg: #faf6ee;
+            --parchment-card: #f3ecd8;
+            --text-dark: #2c221e;
+            --text-muted: #6b5c54;
+            
+            --shadow-magic: 0 10px 30px rgba(7, 46, 33, 0.3), 0 0 20px rgba(107, 33, 168, 0.3);
+            --font-title: 'Cinzel Decorative', 'Cinzel', serif;
+            --font-serif: 'Playfair Display', serif;
+            --font-script: 'Great Vibes', cursive;
+            --font-sans: 'Montserrat', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #030a07;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(107, 33, 168, 0.35) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(15, 82, 60, 0.4) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, #05140e 0%, #020604 100%);
+            min-height: 100vh;
+            font-family: var(--font-sans);
+            color: var(--text-dark);
+            overflow-x: hidden;
+            position: relative;
+            padding: 20px 10px;
+        }
+
+        #canvas-stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Firebase Config Banner Notice */
+        .config-banner {
+            background: rgba(107, 33, 168, 0.9);
+            border: 2px solid var(--gold);
+            color: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            text-align: center;
+            font-size: 0.9rem;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+            display: none;
+        }
+        .config-banner button {
+            background: var(--gold);
+            color: var(--purple-dark);
+            border: none;
+            padding: 6px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        /* Status Indicator */
+        .sync-badge {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 100;
+            background: rgba(7, 46, 33, 0.85);
+            border: 1px solid var(--gold);
+            padding: 8px 14px;
+            border-radius: 20px;
+            color: var(--gold-light);
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+        }
+        .sync-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #22c55e;
+            box-shadow: 0 0 8px #22c55e;
+        }
+        .sync-dot.offline {
+            background-color: #ef4444;
+            box-shadow: 0 0 8px #ef4444;
+        }
+
+        /* Header / Cover Section */
+        .book-cover {
+            background: linear-gradient(135deg, var(--emerald-dark) 0%, var(--purple-dark) 50%, var(--emerald-dark) 100%);
+            border: 3px solid var(--gold);
+            border-radius: 20px;
+            padding: 40px 20px;
+            text-align: center;
+            position: relative;
+            box-shadow: var(--shadow-magic), inset 0 0 50px rgba(0,0,0,0.6);
+            margin-bottom: 40px;
+            overflow: hidden;
+        }
+
+        .book-cover::before {
+            content: '';
+            position: absolute;
+            top: 10px; left: 10px; right: 10px; bottom: 10px;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 14px;
+            pointer-events: none;
+        }
+
+        .book-title {
+            font-family: var(--font-title);
+            color: var(--gold);
+            font-size: clamp(1.8rem, 5vw, 3.2rem);
+            text-shadow: 0 0 12px var(--gold-shadow), 0 2px 4px rgba(0,0,0,0.8);
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .book-subtitle {
+            font-family: var(--font-script);
+            color: var(--purple-soft);
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            margin-bottom: 20px;
+        }
+
+        .authors-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--gold);
+            padding: 8px 25px;
+            border-radius: 30px;
+            color: var(--gold-light);
+            font-family: var(--font-serif);
+            font-size: 1.1rem;
+        }
+
+        /* Main Book Layout */
+        .book-body {
+            background: var(--parchment-bg);
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            border: 2px solid var(--gold);
+            padding: 30px;
+            position: relative;
+            min-height: 500px;
+        }
+
+        .book-body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 50%;
+            width: 2px; height: 100%;
+            background: linear-gradient(to bottom, transparent, rgba(184, 134, 11, 0.3), transparent);
+            display: none;
+        }
+
+        @media(min-width: 900px) {
+            .book-body::before { display: block; }
+            .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+        }
+
+        .section-title {
+            font-family: var(--font-serif);
+            color: var(--emerald-dark);
+            border-bottom: 2px dashed var(--gold);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.4rem;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--purple-deep);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1.5px solid #dcd1b8;
+            border-radius: 8px;
+            background-color: #fff;
+            font-family: var(--font-sans);
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--purple-vibrant);
+            box-shadow: 0 0 8px rgba(107, 33, 168, 0.2);
+        }
+
+        textarea.form-control {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .btn-magic {
+            background: linear-gradient(135deg, var(--emerald) 0%, var(--purple-vibrant) 100%);
+            color: #fff;
+            border: 1px solid var(--gold);
+            padding: 14px 25px;
+            border-radius: 30px;
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-magic:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(107, 33, 168, 0.4);
+            border-color: #fff;
+        }
+
+        /* Filter Controls */
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: transparent;
+            border: 1px solid var(--purple-deep);
+            color: var(--purple-deep);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn.active, .filter-btn:hover {
+            background: var(--purple-deep);
+            color: #fff;
+        }
+
+        /* Agreement Cards */
+        .agreements-list {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .agreement-card {
+            background: var(--parchment-card);
+            border: 1px solid #e2d7ba;
+            border-left: 5px solid var(--emerald-light);
+            border-radius: 10px;
+            padding: 18px;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+
+        .agreement-card.purple-theme {
+            border-left-color: var(--purple-vibrant);
+        }
+
+        .agreement-card:hover {
+            transform: scale(1.01);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .card-title {
+            font-family: var(--font-serif);
+            font-size: 1.15rem;
+            color: var(--emerald-dark);
+            font-weight: 700;
+        }
+
+        .card-badge {
+            font-size: 0.7rem;
+            padding: 3px 10px;
+            border-radius: 12px;
+            background: rgba(107, 33, 168, 0.1);
+            color: var(--purple-vibrant);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .card-body {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+            white-space: pre-wrap;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-top: 1px dashed rgba(0,0,0,0.1);
+            padding-top: 8px;
+        }
+
+        .card-author {
+            font-family: var(--font-script);
+            font-size: 1.1rem;
+            color: var(--purple-deep);
+            font-weight: bold;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-icon {
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+
+        .action-icon:hover {
+            color: #dc2626;
+        }
+
+        /* Config Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: var(--parchment-bg);
+            border: 2px solid var(--gold);
+            border-radius: 15px;
+            max-width: 500px;
+            width: 100%;
+            padding: 25px;
+            box-shadow: var(--shadow-magic);
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas-stars"></canvas>
+
+    <div class="sync-badge">
+        <div id="sync-dot" class="sync-dot"></div>
+        <span id="sync-text">Conectado a Firebase</span>
+    </div>
+
+    <div class="container">
+
+        <!-- Banner if Firebase isn't set up yet -->
+        <div id="config-banner" class="config-banner">
+            ✨ <strong>¡Casi listos!</strong> Para sincronizar en tiempo real entre Nikol y Aitana, configura tus claves de Firebase.
+            <button onclick="openConfigModal()">Configurar Firebase</button>
+        </div>
+
+        <!-- Cover Header -->
+        <header class="book-cover">
+            <h1 class="book-title">Acuerdos</h1>
+            <div class="book-subtitle">Nikol & Aitana</div>
+            <div class="authors-tag">
+                <i class="fa-solid fa-feather-pointed"></i>
+                <span>Libro de Promesas & Compromisos</span>
+                <i class="fa-solid fa-sparkles"></i>
+            </div>
+        </header>
+
+        <!-- Book Main Page -->
+        <main class="book-body">
+            <div class="grid-layout">
+                
+                <!-- Left Page: Form -->
+                <section class="page-left">
+                    <h2 class="section-title">
+                        <i class="fa-solid fa-pen-nib" style="color: var(--purple-vibrant);"></i>
+                        Nuevo Acuerdo Mágico
+                    </h2>
+
+                    <form id="agreement-form">
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-user"></i> Autor / Creador</label>
+                            <select id="author" class="form-control" required>
+                                <option value="Nikol & Aitana">Ambas (Nikol y Aitana)</option>
+                                <option value="Nikol">Nikol</option>
+                                <option value="Aitana">Aitana</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-heading"></i> Título del Acuerdo</label>
+                            <input type="text" id="title" class="form-control" placeholder="Ej. Tiempo juntos los fines de semana" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-tags"></i> Categoría</label>
+                            <select id="category" class="form-control" required>
+                                <option value="Promesa">💖 Promesa</option>
+                                <option value="Convivencia">🏡 Convivencia</option>
+                                <option value="Aventuras">🌌 Aventuras & Viajes</option>
+                                <option value="Apoyo">🤗 Apoyo Mutuo</option>
+                                <option value="Especial">✨ Especial</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-scroll"></i> Contenido del Acuerdo</label>
+                            <textarea id="content" class="form-control" placeholder="Escriban aquí lo que comprometen o acuerdan con todo el corazón..." required></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-magic">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            Sellar e Inscribir Acuerdo
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Right Page: Display List -->
+                <section class="page-right">
+                    <h2 class="section-title">
+                        <i class="fa-solid fa-book-bookmark" style="color: var(--emerald-light);"></i>
+                        Nuestros Acuerdos
+                    </h2>
+
+                    <!-- Filter Bar -->
+                    <div class="filter-bar">
+                        <button class="filter-btn active" onclick="filterAgreements('all')">Todos</button>
+                        <button class="filter-btn" onclick="filterAgreements('Promesa')">Promesas</button>
+                        <button class="filter-btn" onclick="filterAgreements('Convivencia')">Convivencia</button>
+                        <button class="filter-btn" onclick="filterAgreements('Aventuras')">Aventuras</button>
+                    </div>
+
+                    <!-- List Container -->
+                    <div id="agreements-container" class="agreements-list">
+                        <!-- Agreements will appear here -->
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Firebase Setup -->
+    <div id="config-modal" class="modal">
+        <div class="modal-content">
+            <h3 style="font-family: var(--font-serif); color: var(--emerald-dark); margin-bottom: 15px;">
+                ⚙️ Configurar Firebase Realtime Database
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
+                Pega aquí tu objeto <code>firebaseConfig</code> obtenido de la consola de Firebase.
+            </p>
+            <div class="form-group">
+                <label>databaseURL</label>
+                <input type="text" id="cfg-dburl" class="form-control" placeholder="https://tu-proyecto-default-rtdb.firebaseio.com">
+            </div>
+            <div class="form-group">
+                <label>apiKey</label>
+                <input type="text" id="cfg-apikey" class="form-control" placeholder="AIzaSy...">
+            </div>
+            <div class="form-group">
+                <label>projectId</label>
+                <input type="text" id="cfg-projectid" class="form-control" placeholder="tu-proyecto-id">
+            </div>
+            <button class="btn-magic" onclick="saveFirebaseConfig()">Guardar y Conectar</button>
+        </div>
+    </div>
+
+    <script>
+        // Default LocalStorage Backup Keys
+        let firebaseApp = null;
+        let db = null;
+        let currentFilter = 'all';
+        let agreementsData = [];
+
+        // Check stored firebase config
+        const storedConfig = localStorage.getItem('nikol_aitana_fb_config');
+
+        if (storedConfig) {
+            initFirebase(JSON.parse(storedConfig));
+        } else {
+            // Demo Mode / Alert Banner
+            document.getElementById('config-banner').style.display = 'block';
+            loadFromLocalStorage();
+        }
+
+        function initFirebase(config) {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(config);
+                }
+                db = firebase.database();
+                
+                // Realtime Listener
+                db.ref('acuerdos').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    agreementsData = [];
+                    if (data) {
+                        Object.keys(data).forEach(key => {
+                            agreementsData.push({ id: key, ...data[key] });
+                        });
+                    }
+                    agreementsData.sort((a,b) => b.timestamp - a.timestamp);
+                    renderAgreements();
+                    updateSyncStatus(true);
+                }, (error) => {
+                    console.error("Firebase Read Error:", error);
+                    updateSyncStatus(false);
+                });
+
+            } catch (e) {
+                console.error("Firebase Init Error:", e);
+                updateSyncStatus(false);
+            }
+        }
+
+        function updateSyncStatus(isOnline) {
+            const dot = document.getElementById('sync-dot');
+            const text = document.getElementById('sync-text');
+            if (isOnline) {
+                dot.classList.remove('offline');
+                text.innerText = "Sincronizado en Tiempo Real";
+            } else {
+                dot.classList.add('offline');
+                text.innerText = "Modo Local (Sin Firebase)";
+            }
+        }
+
+        // Handle Form Submit
+        document.getElementById('agreement-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const author = document.getElementById('author').value;
+            const title = document.getElementById('title').value;
+            const category = document.getElementById('category').value;
+            const content = document.getElementById('content').value;
+
+            const newAgreement = {
+                author,
+                title,
+                category,
+                content,
+                date: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
+                timestamp: Date.now()
+            };
+
+            if (db) {
+                // Save to Firebase
+                db.ref('acuerdos').push(newAgreement);
+            } else {
+                // Save Local Backup
+                newAgreement.id = 'local_' + Date.now();
+                agreementsData.unshift(newAgreement);
+                localStorage.setItem('nikol_aitana_agreements', JSON.stringify(agreementsData));
+                renderAgreements();
+            }
+
+            // Confetti Magic
+            confetti({
+                particleCount: 80,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#0f523c', '#6b21a8', '#d4af37']
+            });
+
+            // Reset form
+            document.getElementById('title').value = '';
+            document.getElementById('content').value = '';
+        });
+
+        function renderAgreements() {
+            const container = document.getElementById('agreements-container');
+            container.innerHTML = '';
+
+            const filtered = currentFilter === 'all' 
+                ? agreementsData 
+                : agreementsData.filter(item => item.category === currentFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: var(--text-muted); padding: 30px;">
+                        <i class="fa-solid fa-feather" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
+                        <p>No hay acuerdos en esta categoría aún.</p>
+                    </div>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const isPurple = item.author === 'Aitana';
+                const card = document.createElement('div');
+                card.className = `agreement-card ${isPurple ? 'purple-theme' : ''}`;
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title">${escapeHtml(item.title)}</div>
+                        <span class="card-badge">${escapeHtml(item.category)}</span>
+                    </div>
+                    <div class="card-body">${escapeHtml(item.content)}</div>
+                    <div class="card-footer">
+                        <span>Escrito el ${item.date}</span>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span class="card-author">~ ${escapeHtml(item.author)}</span>
+                            <div class="card-actions">
+                                <i class="fa-solid fa-trash-can action-icon" onclick="deleteAgreement('${item.id}')"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function deleteAgreement(id) {
+            if (confirm("¿Seguras de que desean borrar este acuerdo mágico?")) {
+                if (db) {
+                    db.ref('acuerdos/' + id).remove();
+                } else {
+                    agreementsData = agreementsData.filter(item => item.id !== id);
+                    localStorage.setItem('nikol_aitana_agreements', JSON.stringify(agreementsData));
+                    renderAgreements();
+                }
+            }
+        }
+
+        function filterAgreements(category) {
+            currentFilter = category;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderAgreements();
+        }
+
+        function loadFromLocalStorage() {
+            const local = localStorage.getItem('nikol_aitana_agreements');
+            if (local) {
+                agreementsData = JSON.parse(local);
+                renderAgreements();
+            }
+            updateSyncStatus(false);
+        }
+
+        // Modal Helpers
+        function openConfigModal() {
+            document.getElementById('config-modal').classList.add('active');
+        }
+
+        function saveFirebaseConfig() {
+            const config = {
+                databaseURL: document.getElementById('cfg-dburl').value.trim(),
+                apiKey: document.getElementById('cfg-apikey').value.trim(),
+                projectId: document.getElementById('cfg-projectid').value.trim()
+            };
+
+            if (config.databaseURL && config.apiKey) {
+                localStorage.setItem('nikol_aitana_fb_config', JSON.stringify(config));
+                document.getElementById('config-modal').classList.remove('active');
+                document.getElementById('config-banner').style.display = 'none';
+                initFirebase(config);
+            } else {
+                alert("Por favor completa al menos databaseURL y apiKey.");
+            }
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Background Starfield Effect
+        const canvas = document.getElementById('canvas-stars');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initStars();
+        }
+
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < 60; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2,
+                    alpha: Math.random(),
+                    speed: 0.005 + Math.random() * 0.01
+                });
+            }
+        }
+
+        function animateStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(star => {
+                star.alpha += star.speed;
+                if (star.alpha > 1 || star.alpha < 0) star.speed = -star.speed;
+                ctx.fillStyle = `rgba(212, 175, 55, ${Math.abs(star.alpha)})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            requestAnimationFrame(animateStars);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        animateStars();
+    </script>
+</body>
+</html>
